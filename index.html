@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Satyavathy Goshala — Milk Tracker</title>
+<style>
+  :root{
+    --bg:#f6f4ef; --card:#ffffff; --ink:#2c2a26; --sub:#6b6558;
+    --accent:#7a8c5b; --accent-soft:#e7ecdd; --line:#e4dfd3;
+    --danger:#b5654a; --warn:#a17d2c; --radius:14px;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1c1b18; --card:#26241f; --ink:#eee9df; --sub:#a39c8c;
+      --accent:#9ab27a; --accent-soft:#333a29; --line:#38352c; --warn:#d9b25f;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1c1b18; --card:#26241f; --ink:#eee9df; --sub:#a39c8c;
+    --accent:#9ab27a; --accent-soft:#333a29; --line:#38352c; --warn:#d9b25f;
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+  *{box-sizing:border-box;}
+  body{
+    height:100%; margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px;}
+  header{text-align:center;margin-bottom:14px;}
+  header h1{font-size:1.35rem;margin:0 0 2px;font-weight:600;}
+  header p{margin:0;color:var(--sub);font-size:0.88rem;}
+  .banner{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;
+    padding:9px 12px;font-size:0.8rem;color:var(--sub);text-align:center;margin-bottom:14px;}
+  .banner.warn{background:transparent;border-color:var(--warn);color:var(--warn);}
+  .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:4px;margin-bottom:16px;overflow-x:auto;}
+  .tab{flex:1;text-align:center;padding:9px 8px;border-radius:9px;font-size:0.86rem;
+    cursor:pointer;color:var(--sub);white-space:nowrap;user-select:none;}
+  .tab.active{background:var(--accent);color:#fff;}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;text-align:center;}
+  .card .num{font-size:1.6rem;font-weight:700;color:var(--accent);}
+  .card .lbl{font-size:0.78rem;color:var(--sub);margin-top:2px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin-bottom:16px;}
+  .panel h3{margin:0 0 12px;font-size:0.95rem;color:var(--sub);font-weight:600;}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:0.82rem;}
+  .bar-tag{width:64px;flex-shrink:0;color:var(--sub);text-align:right;}
+  .bar-track{flex:1;background:var(--accent-soft);border-radius:6px;height:16px;overflow:hidden;}
+  .bar-fill{background:var(--accent);height:100%;border-radius:6px;transition:width .3s;}
+  .bar-val{width:52px;flex-shrink:0;font-weight:600;}
+  .empty{color:var(--sub);font-size:0.85rem;text-align:center;padding:14px 0;}
+  form{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  form .full{grid-column:1/-1;}
+  label{font-size:0.76rem;color:var(--sub);display:block;margin-bottom:3px;}
+  input,select,textarea{width:100%;padding:8px 9px;border:1px solid var(--line);
+    border-radius:8px;background:var(--bg);color:var(--ink);font-size:0.88rem;font-family:inherit;}
+  textarea{resize:vertical;min-height:38px;}
+  .btn{padding:9px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;
+    font-size:0.86rem;cursor:pointer;font-weight:600;}
+  .btn:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn.secondary{background:var(--accent-soft);color:var(--ink);}
+  .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+  .row-actions{display:flex;gap:6px;}
+  table{width:100%;border-collapse:collapse;font-size:0.82rem;}
+  .table-wrap{overflow-x:auto;}
+  th,td{padding:7px 6px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;}
+  th{color:var(--sub);font-weight:600;font-size:0.74rem;text-transform:uppercase;}
+  .note-cell{white-space:normal;max-width:140px;color:var(--sub);}
+  .session-tag{padding:2px 7px;border-radius:20px;font-size:0.7rem;font-weight:600;}
+  .session-tag.morning{background:#f3e4c0;color:#7a5a1a;}
+  .session-tag.evening{background:#dfe1ee;color:#3f4a7a;}
+  :root[data-theme="dark"] .session-tag.morning,
+  :root:not([data-theme="light"]) .session-tag.morning{background:#4a3d1f;color:#e8cf8f;}
+  :root[data-theme="dark"] .session-tag.evening,
+  :root:not([data-theme="light"]) .session-tag.evening{background:#2b2f42;color:#b7bde0;}
+  .logo{width:52px;height:52px;border-radius:12px;object-fit:cover;flex-shrink:0;
+    border:1px solid var(--line);background:#fff;}
+  .brand-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:2px;}
+  .reminder-row{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .reminder-row .field{flex:1;min-width:140px;}
+  .reminder-block{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line);}
+  .reminder-block:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .muted-note{font-size:0.78rem;color:var(--sub);margin-top:8px;line-height:1.4;}
+  .copy-box{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+    font-size:0.8rem;color:var(--sub);margin-top:8px;white-space:pre-wrap;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand-row">
+      <img class="logo" src="data:image/png;base64,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" alt="Satyavathy Goshala logo" onerror="this.style.display='none'">
+      <h1>Satyavathy Goshala</h1>
+    </div>
+    <p>Daily milk production tracker — open link, no sign-in needed</p>
+  </header>
+  <div id="statusBanner"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="view"><div class="empty">Loading shared data…</div></div>
+</div>
+
+<script>
+// ==== Shared backend: Google Apps Script Web App over a Google Sheet ====
+// Paste the deployed Apps Script Web App URL (ends in /exec) here.
+const API_URL = "https://script.google.com/macros/s/AKfycbwD7nWZptrKVyroG77iTXec1Y2L4GYRKPOTbnMx7fYTgzvwsF1TvRVNYLTHQmI6bb84/exec";
+
+let entries = [];
+let activeTab = "manage";
+let editingId = null;
+let loaded = false;
+let apiOk = null; // null = unknown, true/false = known
+let refreshTimer = null;
+let saving = false;
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+const TABS = [
+  {id:"manage", label:"📝 Manage"},
+  {id:"morning", label:"☀️ Morning"},
+  {id:"evening", label:"🌙 Evening"},
+  {id:"combined", label:"📊 Combined"},
+  {id:"reminders", label:"⏰ Reminders"},
+  {id:"export", label:"⬇️ Export"}
+];
+
+let downloadsCap = null;
+
+const REMINDER_PREFS_KEY = "goshala_reminder_prefs_v1";
+function loadReminderPrefs(){
+  try{
+    const raw = localStorage.getItem(REMINDER_PREFS_KEY);
+    return raw ? JSON.parse(raw) : {morningTime:"06:30", eveningTime:"18:30"};
+  }catch(e){ return {morningTime:"06:30", eveningTime:"18:30"}; }
+}
+function saveReminderPrefs(p){
+  try{ localStorage.setItem(REMINDER_PREFS_KEY, JSON.stringify(p)); }catch(e){}
+}
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+function fmtGCalDate(d){
+  return `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+}
+function buildGCalUrl(title, timeStr, details){
+  const [hh, mm] = timeStr.split(":").map(Number);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0);
+  const end = new Date(start.getTime() + 15*60000);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: title,
+    dates: fmtGCalDate(start) + "/" + fmtGCalDate(end),
+    details: details,
+    recur: "RRULE:FREQ=DAILY"
+  });
+  return "https://calendar.google.com/calendar/render?" + params.toString();
+}
+
+function apiConfigured(){
+  return API_URL && API_URL.indexOf("PASTE_YOUR_APPS_SCRIPT") === -1;
+}
+
+async function apiList(){
+  const res = await fetch(API_URL + "?action=list", { method: "GET" });
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || "Unknown API error");
+  return json.entries || [];
+}
+async function apiAdd(data){
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "add", ...data })
+  });
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || "Add failed");
+  return json;
+}
+async function apiUpdate(id, data){
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "update", id, ...data })
+  });
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || "Update failed");
+  return json;
+}
+async function apiDelete(id){
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ action: "delete", id })
+  });
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || "Delete failed");
+  return json;
+}
+
+async function refreshEntries(silent){
+  if(!apiConfigured()){ loaded = true; apiOk = false; render(); return; }
+  try{
+    const list = await apiList();
+    entries = list.map(e => ({
+      id: e.id, date: e.date, session: e.session, cowTag: e.cowTag,
+      litres: Number(e.litres || 0), note: e.note || ""
+    }));
+    apiOk = true;
+    loaded = true;
+    if(!silent) render(); else if(activeTab !== "manage" || !editingId) render();
+  }catch(err){
+    console.error("Refresh failed", err);
+    apiOk = false;
+    loaded = true;
+    render();
+  }
+}
+
+function startAutoRefresh(){
+  if(refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(()=>{ if(!saving) refreshEntries(true); }, 15000);
+}
+
+function renderBanner(){
+  const el = document.getElementById("statusBanner");
+  if(!apiConfigured()){
+    el.innerHTML = `<div class="banner warn">This tracker isn't connected to its shared Google Sheet yet. The owner needs to paste the Apps Script Web App URL into the page's API_URL setting.</div>`;
+  } else if(apiOk === false){
+    el.innerHTML = `<div class="banner warn">Couldn't reach the shared Google Sheet right now. Check your internet connection, or try refreshing.</div>`;
+  } else {
+    el.innerHTML = `<div class="banner">Data is stored in a shared Google Sheet. Anyone with this link can view, add, edit, and delete entries — no sign-in required.</div>`;
+  }
+}
+
+function renderTabs(){
+  const t = document.getElementById("tabs");
+  t.innerHTML = TABS.map(tab=>
+    `<div class="tab ${activeTab===tab.id?'active':''}" data-tab="${tab.id}">${tab.label}</div>`
+  ).join("");
+  t.querySelectorAll(".tab").forEach(el=>{
+    el.onclick = ()=>{ activeTab = el.dataset.tab; editingId=null; render(); };
+  });
+}
+
+function filteredEntries(session){
+  if(session==="combined") return entries;
+  return entries.filter(e=>e.session===session);
+}
+function summarize(list){
+  const totalLitres = list.reduce((s,e)=>s+Number(e.litres||0),0);
+  const cows = new Set(list.map(e=>e.cowTag)).size;
+  return {totalLitres, cows};
+}
+function aggByCow(list){
+  const map = {};
+  list.forEach(e=>{ map[e.cowTag] = (map[e.cowTag]||0) + Number(e.litres||0); });
+  return Object.entries(map).sort((a,b)=>b[1]-a[1]);
+}
+
+function csvEscape(v){
+  const s = String(v == null ? "" : v);
+  if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+function csvRow(arr){ return arr.map(csvEscape).join(",") + "\r\n"; }
+
+function inRange(dateStr, from, to){
+  if(from && dateStr < from) return false;
+  if(to && dateStr > to) return false;
+  return true;
+}
+
+function buildExportTable({sessionScope, reportType, fromDate, toDate}){
+  let list = entries.filter(e => inRange(e.date || "", fromDate, toDate));
+  if(sessionScope !== "combined"){
+    list = list.filter(e => e.session === sessionScope);
+  }
+
+  if(reportType === "detailed"){
+    const headers = ["Date","Session","Cow Tag Number","Number of Litres","Note"];
+    const rows = list.slice().sort((a,b)=> (a.date||"").localeCompare(b.date||"")).map(e=>[
+      e.date||"", e.session==='morning'?'Morning':'Evening', e.cowTag, Number(e.litres||0).toFixed(1), e.note||""
+    ]);
+    const totalLitres = list.reduce((s,e)=>s+Number(e.litres||0),0);
+    const totalCows = new Set(list.map(e=>e.cowTag)).size;
+    return { headers, rows, summaryLine: `Entries: ${list.length} · Cows recorded: ${totalCows} · Total litres: ${totalLitres.toFixed(1)} L` };
+  }
+
+  // Daily summary
+  const byDate = {};
+  list.forEach(e=>{
+    const d = e.date || "Unknown";
+    if(!byDate[d]) byDate[d] = { morningLitres:0, morningCows:new Set(), eveningLitres:0, eveningCows:new Set(), allCows:new Set() };
+    const litres = Number(e.litres||0);
+    byDate[d].allCows.add(e.cowTag);
+    if(e.session === "morning"){
+      byDate[d].morningLitres += litres;
+      byDate[d].morningCows.add(e.cowTag);
+    } else {
+      byDate[d].eveningLitres += litres;
+      byDate[d].eveningCows.add(e.cowTag);
+    }
+  });
+  const dates = Object.keys(byDate).sort();
+  let headers, rows;
+  let grandTotalLitres = 0;
+  const grandCows = new Set();
+
+  if(sessionScope === "combined"){
+    headers = ["Date","Morning Cows","Morning Litres","Evening Cows","Evening Litres","Total Cows","Total Litres"];
+    rows = dates.map(d=>{
+      const r = byDate[d];
+      const totalLitres = r.morningLitres + r.eveningLitres;
+      grandTotalLitres += totalLitres;
+      r.allCows.forEach(c=>grandCows.add(c));
+      return [d, r.morningCows.size, r.morningLitres.toFixed(1), r.eveningCows.size, r.eveningLitres.toFixed(1), r.allCows.size, totalLitres.toFixed(1)];
+    });
+  } else {
+    const label = sessionScope === "morning" ? "Morning" : "Evening";
+    headers = ["Date", `${label} Cows`, `${label} Litres`];
+    rows = dates.map(d=>{
+      const r = byDate[d];
+      const cows = sessionScope === "morning" ? r.morningCows.size : r.eveningCows.size;
+      const litres = sessionScope === "morning" ? r.morningLitres : r.eveningLitres;
+      grandTotalLitres += litres;
+      (sessionScope === "morning" ? r.morningCows : r.eveningCows).forEach(c=>grandCows.add(c));
+      return [d, cows, litres.toFixed(1)];
+    });
+  }
+  return { headers, rows, summaryLine: `Days: ${dates.length} · Cows recorded: ${grandCows.size} · Total litres: ${grandTotalLitres.toFixed(1)} L` };
+}
+
+function buildExportCsv(opts){
+  const { headers, rows, summaryLine } = buildExportTable(opts);
+  let csv = csvRow(headers);
+  rows.forEach(r => csv += csvRow(r));
+  csv += csvRow([]) + csvRow([summaryLine]);
+  return csv;
+}
+
+function exportTitleParts({sessionScope, reportType, fromDate, toDate}){
+  const scopeLabel = sessionScope === "combined" ? "Combined (Morning + Evening)" : (sessionScope === "morning" ? "Morning" : "Evening");
+  const typeLabel = reportType === "daily" ? "Daily Totals" : "Detailed Entries";
+  const rangeLabel = (fromDate || toDate) ? `${fromDate||"start"} to ${toDate||"today"}` : "All time";
+  return { scopeLabel, typeLabel, rangeLabel };
+}
+
+function buildExportFilename({sessionScope, reportType, fromDate, toDate}, ext){
+  const scopeLabel = sessionScope === "combined" ? "Combined" : (sessionScope === "morning" ? "Morning" : "Evening");
+  const typeLabel = reportType === "daily" ? "DailyTotals" : "Detailed";
+  const rangeLabel = (fromDate || toDate) ? `_${fromDate||"start"}_to_${toDate||"now"}` : "_AllTime";
+  return `Satyavathy_Goshala_${scopeLabel}_${typeLabel}${rangeLabel}.${ext}`;
+}
+
+async function buildExportPdfBlob(opts){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "pt" });
+  const { headers, rows, summaryLine } = buildExportTable(opts);
+  const { scopeLabel, typeLabel, rangeLabel } = exportTitleParts(opts);
+
+  doc.setFontSize(16);
+  doc.text("Satyavathy Goshala — Milk Production Report", 40, 40);
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  doc.text(`${typeLabel}  ·  ${scopeLabel}  ·  Period: ${rangeLabel}`, 40, 58);
+  doc.text(`Generated ${new Date().toLocaleString()}`, 40, 72);
+
+  doc.autoTable({
+    head: [headers],
+    body: rows,
+    startY: 88,
+    styles: { fontSize: 9, cellPadding: 5 },
+    headStyles: { fillColor: [122, 140, 91] },
+    alternateRowStyles: { fillColor: [247, 245, 240] },
+    foot: [[{content: summaryLine, colSpan: headers.length}]],
+    footStyles: { fillColor: [231, 236, 221], textColor: [44,42,38], fontStyle: "bold" }
+  });
+
+  return doc.output("blob");
+}
+
+function renderSummaryView(session, title){
+  const list = filteredEntries(session);
+  const {totalLitres, cows} = summarize(list);
+  const agg = aggByCow(list);
+  const max = agg.length ? agg[0][1] : 0;
+  let bars = agg.length ? agg.map(([tag,litres])=>`
+    <div class="bar-row">
+      <div class="bar-tag">${tag}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${max?Math.max(4,(litres/max*100)):0}%"></div></div>
+      <div class="bar-val">${litres.toFixed(1)} L</div>
+    </div>`).join("") : `<div class="empty">No entries yet.</div>`;
+  return `
+    <div class="cards">
+      <div class="card"><div class="num">${cows}</div><div class="lbl">Number of Cows</div></div>
+      <div class="card"><div class="num">${totalLitres.toFixed(1)}</div><div class="lbl">Total Litres (${title})</div></div>
+    </div>
+    <div class="panel">
+      <h3>Litres by Cow — ${title}</h3>
+      ${bars}
+    </div>
+  `;
+}
+
+function renderManageView(){
+  const canAct = apiConfigured();
+  const rows = entries.slice().sort((a,b)=> (b.date||"").localeCompare(a.date||""))
+    .map(e=>`
+      <tr>
+        <td>${e.date||""}</td>
+        <td><span class="session-tag ${e.session}">${e.session==='morning'?'Morning':'Evening'}</span></td>
+        <td>${e.cowTag}</td>
+        <td>${Number(e.litres).toFixed(1)}</td>
+        <td class="note-cell">${(e.note||"").replace(/</g,"&lt;")}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn secondary" style="padding:5px 9px;font-size:0.75rem" ${canAct?'':'disabled'} onclick="startEdit('${e.id}')">Edit</button>
+            <button class="btn danger" style="padding:5px 9px;font-size:0.75rem" ${canAct?'':'disabled'} onclick="deleteEntry('${e.id}')">Delete</button>
+          </div>
+        </td>
+      </tr>`).join("");
+
+  const edit = editingId ? entries.find(e=>e.id===editingId) : null;
+
+  return `
+    <div class="panel">
+      <h3>${edit ? "Edit Entry" : "Add Entry"}</h3>
+      <form id="entryForm">
+        <div><label>Date</label><input type="date" name="date" value="${edit?edit.date:new Date().toISOString().slice(0,10)}" required></div>
+        <div><label>Session</label>
+          <select name="session">
+            <option value="morning" ${edit&&edit.session==='morning'?'selected':''}>Morning</option>
+            <option value="evening" ${edit&&edit.session==='evening'?'selected':''}>Evening</option>
+          </select>
+        </div>
+        <div><label>Cow Tag Number</label><input type="text" name="cowTag" value="${edit?edit.cowTag:''}" placeholder="e.g. C-014" required></div>
+        <div><label>Number of Litres</label><input type="number" step="0.1" min="0" name="litres" value="${edit?edit.litres:''}" required></div>
+        <div class="full"><label>Note</label><textarea name="note" placeholder="Optional note">${edit?edit.note||'':''}</textarea></div>
+        <div class="full row-actions">
+          <button type="submit" class="btn" ${canAct?'':'disabled'}>${edit?"Save Changes":"Add Entry"}</button>
+          ${edit?'<button type="button" class="btn secondary" onclick="cancelEdit()">Cancel</button>':''}
+        </div>
+      </form>
+    </div>
+    <div class="panel">
+      <div class="row-actions" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">All Entries (${entries.length})</h3>
+        <button type="button" class="btn secondary" id="refreshBtn" style="padding:6px 12px;font-size:0.78rem">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Session</th><th>Cow Tag</th><th>Litres</th><th>Note</th><th></th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" class="empty">No entries yet — add your first one above.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderRemindersView(){
+  const p = loadReminderPrefs();
+  return `
+    <div class="panel">
+      <h3>Daily Milking Reminders</h3>
+      <p class="muted-note" style="margin-top:0">
+        This is a shared web page, so it can't send phone push notifications by itself.
+        The reliable way to get a daily alert on your phone is to add a recurring event
+        to your own calendar app below — it takes one tap and repeats every day automatically.
+      </p>
+
+      <div class="reminder-block">
+        <strong>☀️ Morning Milking</strong>
+        <div class="reminder-row" style="margin-top:8px">
+          <div class="field">
+            <label>Reminder time</label>
+            <input type="time" id="morningTime" value="${p.morningTime}">
+          </div>
+          <button class="btn" id="addMorningGCal">Add to Google Calendar</button>
+        </div>
+      </div>
+
+      <div class="reminder-block">
+        <strong>🌙 Evening Milking</strong>
+        <div class="reminder-row" style="margin-top:8px">
+          <div class="field">
+            <label>Reminder time</label>
+            <input type="time" id="eveningTime" value="${p.eveningTime}">
+          </div>
+          <button class="btn" id="addEveningGCal">Add to Google Calendar</button>
+        </div>
+      </div>
+
+      <div class="reminder-block">
+        <strong>Using Apple Calendar, Outlook, or a phone alarm instead?</strong>
+        <p class="muted-note">Copy these details and create a daily recurring reminder in your app of choice:</p>
+        <div class="copy-box" id="manualReminderText"></div>
+        <div class="row-actions" style="margin-top:8px">
+          <button class="btn secondary" id="copyReminderText">Copy Reminder Text</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderExportView(){
+  const canDownload = downloadsCap !== null;
+  return `
+    <div class="panel">
+      <h3>Download Data Sheet</h3>
+      <p class="muted-note" style="margin-top:0">
+        Export the tracker's data as a CSV file you can open in Excel, Google Sheets, or Numbers.
+      </p>
+      <form id="exportForm">
+        <div class="full">
+          <label>Which output</label>
+          <select name="sessionScope">
+            <option value="combined">Combined (Morning + Evening)</option>
+            <option value="morning">Morning only</option>
+            <option value="evening">Evening only</option>
+          </select>
+        </div>
+        <div class="full">
+          <label>Report type</label>
+          <select name="reportType">
+            <option value="daily">Daily totals (one row per day)</option>
+            <option value="detailed">Detailed entries (every log entry)</option>
+          </select>
+        </div>
+        <div>
+          <label>From date (optional)</label>
+          <input type="date" name="fromDate">
+        </div>
+        <div>
+          <label>To date (optional)</label>
+          <input type="date" name="toDate">
+        </div>
+        <div class="full row-actions">
+          <button type="submit" class="btn" ${canDownload?'':'disabled'}>Download CSV</button>
+          <button type="button" id="downloadPdfBtn" class="btn secondary" ${canDownload?'':'disabled'}>Download PDF</button>
+        </div>
+        ${canDownload?'':'<div class="muted-note">Downloads aren\'t available in this view.</div>'}
+      </form>
+    </div>
+  `;
+}
+
+function render(){
+  renderBanner();
+  renderTabs();
+  const v = document.getElementById("view");
+  if(!loaded){ v.innerHTML = `<div class="empty">Loading shared data…</div>`; return; }
+  if(activeTab==="morning") v.innerHTML = renderSummaryView("morning","Morning");
+  else if(activeTab==="evening") v.innerHTML = renderSummaryView("evening","Evening");
+  else if(activeTab==="combined") v.innerHTML = renderSummaryView("combined","Combined (All-Time)");
+  else if(activeTab==="reminders") v.innerHTML = renderRemindersView();
+  else if(activeTab==="export") v.innerHTML = renderExportView();
+  else v.innerHTML = renderManageView();
+
+  const form = document.getElementById("entryForm");
+  if(form){
+    form.onsubmit = async (ev)=>{
+      ev.preventDefault();
+      if(!apiConfigured()) return;
+      const fd = new FormData(form);
+      const data = {
+        date: fd.get("date"), session: fd.get("session"),
+        cowTag: fd.get("cowTag").trim(), litres: parseFloat(fd.get("litres")),
+        note: fd.get("note").trim()
+      };
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      saving = true;
+      try{
+        if(editingId){
+          await apiUpdate(editingId, data);
+          editingId = null;
+        } else {
+          await apiAdd(data);
+        }
+        await refreshEntries(true);
+      }catch(e){
+        console.error("Write failed", e);
+        apiOk = false;
+      }
+      saving = false;
+      submitBtn.disabled = false;
+      render();
+    };
+  }
+
+  const refreshBtn = document.getElementById("refreshBtn");
+  if(refreshBtn){
+    refreshBtn.onclick = async ()=>{
+      refreshBtn.disabled = true;
+      const orig = refreshBtn.textContent;
+      refreshBtn.textContent = "Refreshing…";
+      await refreshEntries(false);
+      refreshBtn.textContent = orig;
+      refreshBtn.disabled = false;
+    };
+  }
+
+  if(activeTab === "reminders"){
+    const morningInput = document.getElementById("morningTime");
+    const eveningInput = document.getElementById("eveningTime");
+    const manualBox = document.getElementById("manualReminderText");
+
+    function updateManualText(){
+      const p = { morningTime: morningInput.value, eveningTime: eveningInput.value };
+      saveReminderPrefs(p);
+      manualBox.textContent =
+        `Satyavathy Goshala — Morning Milking\nDaily at ${p.morningTime}, repeats every day\n\n` +
+        `Satyavathy Goshala — Evening Milking\nDaily at ${p.eveningTime}, repeats every day`;
+    }
+    updateManualText();
+    morningInput.addEventListener("change", updateManualText);
+    eveningInput.addEventListener("change", updateManualText);
+
+    document.getElementById("addMorningGCal").onclick = ()=>{
+      const p = loadReminderPrefs();
+      p.morningTime = morningInput.value;
+      saveReminderPrefs(p);
+      const url = buildGCalUrl(
+        "Satyavathy Goshala — Morning Milking",
+        morningInput.value,
+        "Log this morning's milk production in the Satyavathy Goshala tracker."
+      );
+      window.open(url, "_blank", "noopener");
+    };
+    document.getElementById("addEveningGCal").onclick = ()=>{
+      const p = loadReminderPrefs();
+      p.eveningTime = eveningInput.value;
+      saveReminderPrefs(p);
+      const url = buildGCalUrl(
+        "Satyavathy Goshala — Evening Milking",
+        eveningInput.value,
+        "Log this evening's milk production in the Satyavathy Goshala tracker."
+      );
+      window.open(url, "_blank", "noopener");
+    };
+    document.getElementById("copyReminderText").onclick = async ()=>{
+      const btn = document.getElementById("copyReminderText");
+      try{
+        await navigator.clipboard.writeText(manualBox.textContent);
+        const orig = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(()=>{ btn.textContent = orig; }, 1500);
+      }catch(e){
+        console.error("Copy failed", e);
+      }
+    };
+  }
+
+  const exportForm = document.getElementById("exportForm");
+  if(exportForm){
+    exportForm.onsubmit = async (ev)=>{
+      ev.preventDefault();
+      if(!downloadsCap) return;
+      const fd = new FormData(exportForm);
+      const sessionScope = fd.get("sessionScope");
+      const reportType = fd.get("reportType");
+      const fromDate = fd.get("fromDate") || "";
+      const toDate = fd.get("toDate") || "";
+
+      const csv = buildExportCsv({sessionScope, reportType, fromDate, toDate});
+      const filename = buildExportFilename({sessionScope, reportType, fromDate, toDate}, "csv");
+
+      const submitBtn = exportForm.querySelector('button[type="submit"]');
+      const orig = submitBtn.textContent;
+      submitBtn.disabled = true;
+      try{
+        const result = await downloadsCap.save({ filename, data: csv });
+        submitBtn.textContent = result.status === "saved" ? "Downloaded!" : "Delivered!";
+      }catch(e){
+        console.error("Download failed", e);
+        submitBtn.textContent = (e && e.code === "declined") ? "Cancelled" : "Download failed";
+      }
+      setTimeout(()=>{ submitBtn.textContent = orig; submitBtn.disabled = false; }, 1800);
+    };
+
+    const pdfBtn = document.getElementById("downloadPdfBtn");
+    if(pdfBtn){
+      pdfBtn.onclick = async ()=>{
+        if(!downloadsCap) return;
+        const fd = new FormData(exportForm);
+        const opts = {
+          sessionScope: fd.get("sessionScope"),
+          reportType: fd.get("reportType"),
+          fromDate: fd.get("fromDate") || "",
+          toDate: fd.get("toDate") || ""
+        };
+        const filename = buildExportFilename(opts, "pdf");
+        const orig = pdfBtn.textContent;
+        pdfBtn.disabled = true;
+        pdfBtn.textContent = "Building…";
+        try{
+          if(!window.jspdf || !window.jspdf.jsPDF){
+            throw new Error("PDF library not loaded");
+          }
+          const blob = await buildExportPdfBlob(opts);
+          const result = await downloadsCap.save({ filename, data: blob });
+          pdfBtn.textContent = result.status === "saved" ? "Downloaded!" : "Delivered!";
+        }catch(e){
+          console.error("PDF download failed", e);
+          pdfBtn.textContent = (e && e.code === "declined") ? "Cancelled" : "PDF failed";
+        }
+        setTimeout(()=>{ pdfBtn.textContent = orig; pdfBtn.disabled = false; }, 1800);
+      };
+    }
+  }
+}
+
+function startEdit(id){ editingId = id; render(); window.scrollTo({top:0,behavior:"smooth"}); }
+function cancelEdit(){ editingId = null; render(); }
+async function deleteEntry(id){
+  if(!apiConfigured()) return;
+  saving = true;
+  try{
+    await apiDelete(id);
+    await refreshEntries(true);
+  }catch(e){
+    console.error("Delete failed", e);
+    apiOk = false;
+    render();
+  }
+  saving = false;
+}
+
+async function init(){
+  try{ downloadsCap = await claude.use("downloads"); }catch(e){ downloadsCap = null; }
+  await refreshEntries(false);
+  startAutoRefresh();
+}
+
+render();
+init();
+</script>
+</body>
+</html>
